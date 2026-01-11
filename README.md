@@ -1,38 +1,120 @@
-# nextjs-cms
+# Next.js CMS
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Next.js + Drizzle ORM + Better Auth + Hono + Zod を使用した CMS プロジェクト
 
-## Getting Started
+## 技術スタック
 
-First, run the development server:
+- **Next.js 16.1.1** - React フレームワーク
+- **TypeScript** - 型安全性
+- **Drizzle ORM** - データベース ORM
+- **Better Auth** - 認証システム
+- **Hono** - 軽量 Web フレームワーク (API Routes 用)
+- **Zod** - スキーマバリデーション
+- **Biome** - リンター & フォーマッター
 
-```bash
+## セットアップ
+
+### 1. 依存関係のインストール
+
+\`\`\`bash
+npm install
+\`\`\`
+
+### 2. 環境変数の設定
+
+\`.env.example\` をコピーして \`.env\` を作成し、環境変数を設定します。
+
+\`\`\`bash
+cp .env.example .env
+\`\`\`
+
+\`.env\` ファイルを編集して、データベース接続情報と認証シークレットを設定してください。
+
+### 3. データベースのセットアップ
+
+PostgreSQL データベースを準備してから、マイグレーションを実行します。
+
+\`\`\`bash
+# スキーマをデータベースにプッシュ
+npm run db:push
+
+# または、マイグレーションファイルを生成して実行
+npm run db:generate
+npm run db:migrate
+\`\`\`
+
+### 4. 開発サーバーの起動
+
+\`\`\`bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+\`\`\`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで [http://localhost:3000](http://localhost:3000) を開いてアプリケーションにアクセスします。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API エンドポイント
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- \`GET /api/hello\` - サンプルエンドポイント
+- \`POST /api/users\` - ユーザー作成 (Zod バリデーション付き)
+- \`/api/auth/**\` - Better Auth の認証エンドポイント
 
-## Learn More
+## データベース管理
 
-To learn more about Next.js, take a look at the following resources:
+### Drizzle Studio の起動
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+\`\`\`bash
+npm run db:studio
+\`\`\`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+ブラウザで Drizzle Studio が開き、データベースの内容を GUI で確認・編集できます。
 
-## Deploy on Vercel
+### マイグレーション
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+\`\`\`bash
+# マイグレーションファイルの生成
+npm run db:generate
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# マイグレーションの実行
+npm run db:migrate
+
+# スキーマを直接プッシュ (開発時)
+npm run db:push
+\`\`\`
+
+## コード品質
+
+### リント
+
+\`\`\`bash
+npm run lint
+\`\`\`
+
+### フォーマット
+
+\`\`\`bash
+npm run format
+\`\`\`
+
+## プロジェクト構造
+
+\`\`\`
+src/
+├── app/
+│   └── api/
+│       └── [[...route]]/
+│           └── route.ts      # Hono API Routes
+├── db/
+│   ├── index.ts              # Drizzle DB インスタンス
+│   └── schema.ts             # データベーススキーマ
+└── lib/
+    └── auth.ts               # Better Auth 設定
+
+drizzle.config.ts             # Drizzle 設定
+\`\`\`
+
+## Node.js バージョン管理
+
+このプロジェクトは Volta を使用して Node.js のバージョンを管理しています。
+Volta がインストールされている場合、プロジェクトディレクトリに入ると自動的に正しいバージョンに切り替わります。
+
+- Node.js: 22.13.1
+- npm: 10.9.2
