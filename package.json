@@ -20,5 +20,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "typescript": "^5"
+  },
+  "volta": {
+    "node": "22.13.1",
+    "npm": "10.9.2"
   }
 }
