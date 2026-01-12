@@ -2,6 +2,10 @@
 
 Next.js + Drizzle ORM + Better Auth + Hono + Zod を使用した CMS プロジェクト
 
+## 参考デザイン
+
+- https://v0-announcement-management-interfac.vercel.app/
+
 ## 技術スタック
 
 - **Next.js 16.1.1** - React フレームワーク
