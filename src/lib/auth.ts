@@ -12,6 +12,9 @@ export const auth = betterAuth({
     enabled: true,
   },
   socialProviders: {
-    // 必要に応じて Google, GitHub などのプロバイダーを追加
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    },
   },
 });
