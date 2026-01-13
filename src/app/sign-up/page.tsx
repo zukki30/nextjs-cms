@@ -3,6 +3,13 @@
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { z } from "zod";
+
+const signUpSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(1),
+});
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -15,12 +22,15 @@ export default function SignUpPage() {
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const name = String(formData.get("name") || "");
-    const email = String(formData.get("email") || "");
-    const password = String(formData.get("password") || "");
+    const parsed = signUpSchema.safeParse({
+      name: String(formData.get("name") || ""),
+      email: String(formData.get("email") || ""),
+      password: String(formData.get("password") || ""),
+    });
 
-    if (!name || !email || !password) {
-      setError("Name, email, and password are required.");
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((issue) => issue.message);
+      setError(messages[0] || "Name, email, and password are required.");
       setLoading(false);
       return;
     }
@@ -32,9 +42,9 @@ export default function SignUpPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
-          email,
-          password,
+          name: parsed.data.name,
+          email: parsed.data.email,
+          password: parsed.data.password,
           callbackURL: "/",
         }),
       });

@@ -3,12 +3,18 @@
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { z } from "zod";
 
 type SocialProvider = "google";
 
 const providerLabels: Record<SocialProvider, string> = {
   google: "Google",
 };
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
 
 export default function LoginPage() {
   const router = useRouter();
@@ -56,11 +62,14 @@ export default function LoginPage() {
     setEmailLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") || "");
-    const password = String(formData.get("password") || "");
+    const parsed = loginSchema.safeParse({
+      email: String(formData.get("email") || ""),
+      password: String(formData.get("password") || ""),
+    });
 
-    if (!email || !password) {
-      setError("Email and password are required.");
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((issue) => issue.message);
+      setError(messages[0] || "Email and password are required.");
       setEmailLoading(false);
       return;
     }
@@ -72,8 +81,8 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
-          password,
+          email: parsed.data.email,
+          password: parsed.data.password,
           callbackURL: "/",
         }),
       });
