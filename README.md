@@ -62,15 +62,75 @@ Phase 6（公開 API）の完了が中間マイルストーンで、この時点
 
 ## セットアップ
 
-Phase 1 完了後に記載する（Phase 16 で最終化）。
+> Phase 16 で最終化する。現時点では Phase 1（プロジェクト基盤）までの内容。
 
-事前に以下が必要になる。詳細は implementation-plan.md の Phase 0 を参照。
+### 1. ツールチェーン
 
-- content リポジトリ（private）
-- GitHub OAuth App（ログイン用）
-- GitHub App（content への書き込み用。content リポジトリ1つだけにインストールする）
-- ImageKit アカウント
-- デザインシステムの install 用に `read:packages` を付けた classic PAT
+Node と pnpm のバージョンは [`.mise.toml`](./.mise.toml) で固定している。
+
+```bash
+mise install
+```
+
+### 2. デザインシステムの認証
+
+`@zukki30/zukki-design-system` は GitHub Packages の **private パッケージ**で、install に認証が要る。
+`read:packages` を付けた **classic PAT**（fine-grained token は非対応）を `~/.npmrc` に書く。
+
+```
+//npm.pkg.github.com/:_authToken=<TOKEN>
+```
+
+スコープとレジストリの対応はリポジトリの [`.npmrc`](./.npmrc) に入っているため、設定は不要。
+
+### 3. 依存のインストールと起動
+
+```bash
+pnpm install
+cp .env.example .env   # 値は後述
+pnpm dev
+```
+
+`http://localhost:3000` が開く。`GET /api/health` が `{"status":"ok"}` を返せば起動できている。
+
+### 4. 環境変数
+
+[`.env.example`](./.env.example) をコピーして `.env` を作る。
+
+**用途ごとにグループを分け、実際に使う時点で検証する**（`src/lib/env.ts`）。
+そのため、認証情報が空のままでもアプリは起動し、該当の機能を呼んだ時点で初めて失敗する。
+Phase 6（公開 API）までは外部サービスをモックするため、Phase 0 が未完でも開発を進められる。
+
+| グループ | 変数 | 必要になるフェーズ |
+| --- | --- | --- |
+| `core` | `PUBLIC_API_ALLOWED_ORIGINS` | 既定値あり |
+| `auth` | `AUTH_*` / `ADMIN_ALLOWED_*` | Phase 7 |
+| `github` | `GITHUB_APP_*` / `CONTENT_REPO_*` | Phase 3 |
+| `webhook` | `GITHUB_WEBHOOK_SECRET` | Phase 5 |
+| `imagekit` | `IMAGEKIT_*` / `NEXT_PUBLIC_IMAGEKIT_*` | Phase 11 |
+| `upstash` | `UPSTASH_REDIS_REST_*` | Phase 15 |
+| `preview` | `PREVIEW_TOKEN_SECRET` / `PUBLIC_SITE_PREVIEW_URL` | Phase 17 |
+
+`AUTH_SECRET` は `openssl rand -base64 32` で生成する。
+外部サービス側の準備（content リポジトリ・GitHub OAuth App・GitHub App・ImageKit）は
+implementation-plan.md の Phase 0 を参照。
+
+### 5. スクリプト
+
+| コマンド | 内容 |
+| --- | --- |
+| `pnpm dev` | 開発サーバー |
+| `pnpm build` / `pnpm start` | 本番ビルド / 起動 |
+| `pnpm lint` / `pnpm lint:fix` | Biome のチェック / 自動修正 |
+| `pnpm format` | Biome のフォーマット |
+| `pnpm typecheck` | ルート型の生成 + `tsc --noEmit` |
+| `pnpm test` / `pnpm test:watch` | Vitest |
+
+### 6. CI
+
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) で `lint` / `typecheck` / `test` を実行する。
+デザインシステムを CI から install するため、**パッケージ設定の Manage Actions access に
+このリポジトリを `Read` で追加**しておく必要がある。
 
 ## 参考デザイン
 

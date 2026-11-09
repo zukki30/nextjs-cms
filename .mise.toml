@@ -1,0 +1,5 @@
+[tools]
+# CI のワークフローは node-version-file でこのファイルを読むため、CI 側の追従は要らない。
+# バージョンは @zukki30/zukki-design-system 側（zukki-design-system-react の .mise.toml）に揃える。
+node = "24.22.1"
+pnpm = "10.33.0"

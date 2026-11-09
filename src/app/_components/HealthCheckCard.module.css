@@ -1,0 +1,16 @@
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.description {
+  margin: 0;
+  color: var(--color-text-on-surface-subtle);
+}
+
+.result {
+  margin: 0;
+  font-family: var(--font-family-number);
+}

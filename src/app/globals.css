@@ -1,0 +1,27 @@
+/*
+ * アプリ全体の下地。
+ *
+ * 色・余白・フォントはデザインシステムの CSS 変数だけを使う。独自の値は定義しない（PLAN-D2）。
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-surface-page);
+  color: var(--color-text-on-surface-default);
+  font-family: var(--font-family-default);
+}
+
+a {
+  color: var(--color-text-on-link-default);
+}
