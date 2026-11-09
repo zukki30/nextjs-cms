@@ -1,124 +1,79 @@
-# Next.js CMS
+# nextjs-cms
 
-Next.js + Drizzle ORM + Better Auth + Hono + Zod を使用した CMS プロジェクト
+GitHub リポジトリ上の Markdown をデータストアとするヘッドレス CMS。管理画面（Admin）と、コンテンツを配信する公開 API を提供する。
+
+対象コンテンツは **News / Blog / FAQ** の3種類。
+
+## 構成
+
+全体は3つのリポジトリで成り立つ。
+
+```
+公開サイト（別リポジトリ）
+  │  GET /api/v1/*          ← 公開 API だけを参照する
+  ▼
+nextjs-cms（このリポジトリ）
+  ├ /admin        Admin UI
+  ├ /api/admin/*  管理 API
+  └ /api/v1/*     公開 API
+      │ commit / Pull Request（GitHub App）
+      ▼
+nextjs-cms-content（private・データのみ・デプロイしない）
+  └ content/{news,blog,faq}/*.md
+```
+
+設計上の中心となる判断は3つ。
+
+| 判断 | 内容 |
+| --- | --- |
+| 下書きはブランチで表現する | 公開 API は `main` しか読まないため、下書きが公開側へ漏れる経路が構造的に存在しない |
+| 書き込み用の資格情報をブラウザに置かない | GitHub OAuth は本人確認のみ。content への書き込みはサーバー側で発行する GitHub App のインストールトークンで行う |
+| データとコードを同じリポジトリに置かない | 記事の更新でアプリが再デプロイされない。変更履歴・差分・復元は Git の仕組みをそのまま使う |
+
+## 技術スタック
+
+| 領域 | 採用 |
+| --- | --- |
+| フレームワーク | Next.js (App Router) / TypeScript |
+| API | Hono / Zod |
+| 認証 | Auth.js v5（GitHub OAuth・JWT セッション・DB なし） |
+| UI | [@zukki30/zukki-design-system](https://github.com/zukki30/zukki-design-system-react) + CSS Modules |
+| 画像 | ImageKit |
+| 品質 | Biome / Vitest |
+| パッケージ管理 | pnpm（バージョンは mise で固定） |
+
+データベースは使用しない。
+
+## 仕様書
+
+[`docs/specs/github-content-cms/`](./docs/specs/github-content-cms/) に spec-driven development の成果物を置いている。
+
+| ファイル | 内容 |
+| --- | --- |
+| [requirements.md](./docs/specs/github-content-cms/requirements.md) | 機能要件・非機能要件・受け入れ基準 |
+| [design.md](./docs/specs/github-content-cms/design.md) | アーキテクチャ・データモデル・API 仕様 |
+| [implementation-plan.md](./docs/specs/github-content-cms/implementation-plan.md) | フェーズ分割と各フェーズの完了条件 |
+
+## 進捗
+
+実装は Phase 1〜17 に分割しており、各フェーズを issue として管理している。`phase` ラベルの付いた [issue 一覧](https://github.com/zukki30/nextjs-cms/issues?q=is%3Aissue+label%3Aphase) を参照。
+
+Phase 6（公開 API）の完了が中間マイルストーンで、この時点で「content リポジトリに `.md` を置けば公開 API から取得できる」状態に到達する。
+
+## セットアップ
+
+Phase 1 完了後に記載する（Phase 16 で最終化）。
+
+事前に以下が必要になる。詳細は implementation-plan.md の Phase 0 を参照。
+
+- content リポジトリ（private）
+- GitHub OAuth App（ログイン用）
+- GitHub App（content への書き込み用。content リポジトリ1つだけにインストールする）
+- ImageKit アカウント
+- デザインシステムの install 用に `read:packages` を付けた classic PAT
 
 ## 参考デザイン
 
 - https://v0-announcement-management-interfac.vercel.app/
 
-## 技術スタック
-
-- **Next.js 16.1.1** - React フレームワーク
-- **TypeScript** - 型安全性
-- **Drizzle ORM** - データベース ORM
-- **Better Auth** - 認証システム
-- **Hono** - 軽量 Web フレームワーク (API Routes 用)
-- **Zod** - スキーマバリデーション
-- **Biome** - リンター & フォーマッター
-
-## セットアップ
-
-### 1. 依存関係のインストール
-
-\`\`\`bash
-npm install
-\`\`\`
-
-### 2. 環境変数の設定
-
-\`.env.example\` をコピーして \`.env\` を作成し、環境変数を設定します。
-
-\`\`\`bash
-cp .env.example .env
-\`\`\`
-
-\`.env\` ファイルを編集して、データベース接続情報と認証シークレットを設定してください。
-
-### 3. データベースのセットアップ
-
-PostgreSQL データベースを準備してから、マイグレーションを実行します。
-
-\`\`\`bash
-# スキーマをデータベースにプッシュ
-npm run db:push
-
-# または、マイグレーションファイルを生成して実行
-npm run db:generate
-npm run db:migrate
-\`\`\`
-
-### 4. 開発サーバーの起動
-
-\`\`\`bash
-npm run dev
-\`\`\`
-
-ブラウザで [http://localhost:3000](http://localhost:3000) を開いてアプリケーションにアクセスします。
-
-## API エンドポイント
-
-- \`GET /api/hello\` - サンプルエンドポイント
-- \`POST /api/users\` - ユーザー作成 (Zod バリデーション付き)
-- \`/api/auth/**\` - Better Auth の認証エンドポイント
-
-## データベース管理
-
-### Drizzle Studio の起動
-
-\`\`\`bash
-npm run db:studio
-\`\`\`
-
-ブラウザで Drizzle Studio が開き、データベースの内容を GUI で確認・編集できます。
-
-### マイグレーション
-
-\`\`\`bash
-# マイグレーションファイルの生成
-npm run db:generate
-
-# マイグレーションの実行
-npm run db:migrate
-
-# スキーマを直接プッシュ (開発時)
-npm run db:push
-\`\`\`
-
-## コード品質
-
-### リント
-
-\`\`\`bash
-npm run lint
-\`\`\`
-
-### フォーマット
-
-\`\`\`bash
-npm run format
-\`\`\`
-
-## プロジェクト構造
-
-\`\`\`
-src/
-├── app/
-│   └── api/
-│       └── [[...route]]/
-│           └── route.ts      # Hono API Routes
-├── db/
-│   ├── index.ts              # Drizzle DB インスタンス
-│   └── schema.ts             # データベーススキーマ
-└── lib/
-    └── auth.ts               # Better Auth 設定
-
-drizzle.config.ts             # Drizzle 設定
-\`\`\`
-
-## Node.js バージョン管理
-
-このプロジェクトは Volta を使用して Node.js のバージョンを管理しています。
-Volta がインストールされている場合、プロジェクトディレクトリに入ると自動的に正しいバージョンに切り替わります。
-
-- Node.js: 22.13.1
-- npm: 10.9.2
+画面構成・情報設計の参考として扱う。配色やコンポーネントの見た目はデザインシステムに従う。
