@@ -11,7 +11,7 @@
 
 ```
                         ┌─────────────────────────────────────────────┐
-                        │  nextjs-cms (Next.js / Vercel)              │
+                        │  nextjs-cms (Next.js / ローカル実行)        │
   ブラウザ ──────────►  │                                             │
   (Admin)               │  /admin            Admin UI (RSC + CSR)     │
                         │  /api/admin/*      管理 API ─────────────┐  │
@@ -46,9 +46,9 @@
 
 | リポジトリ | 役割 | デプロイ |
 | --- | --- | --- |
-| `nextjs-cms` | Admin UI + 管理 API + 公開 API | する |
+| `nextjs-cms` | Admin UI + 管理 API + 公開 API | **しない**（ローカル実行のみ。requirements.md OPEN-01） |
 | `nextjs-cms-content` | コンテンツの `.md` のみ | **しない** |
-| 公開サイト（別リポジトリ） | 記事を表示する Web サイト | する |
+| 公開サイト（別リポジトリ） | 記事を表示する Web サイト | 本仕様の対象外 |
 
 ```
 公開サイト ──GET /api/v1/*──► nextjs-cms ──commit / PR──► nextjs-cms-content
@@ -568,7 +568,7 @@ type ContentIndex = {
 }
 ```
 
-**本文全文はインデックスに含めない。** 1,000 件規模で数 MB に達し、Vercel Data Cache の1エントリ上限（2MB）を超えるため。`q` の検索対象はタイトル・excerpt・見出し・タクソノミー名に限定する（「全文検索エンジンは導入しない」= requirements 3.2 と整合）。本文全文の検索が必要になった時点で Pagefind 等の導入を検討する。
+**本文全文はインデックスに含めない。** 1,000 件規模で数 MB に達し、リクエストごとにメモリへ展開するコストが大きいため。加えて、ホスティングする場合は Data Cache の1エントリ上限（Vercel なら 2MB）に収まらなくなる。`q` の検索対象はタイトル・excerpt・見出し・タクソノミー名に限定する（「全文検索エンジンは導入しない」= requirements 3.2 と整合）。本文全文の検索が必要になった時点で Pagefind 等の導入を検討する。
 
 ### 6.2 構築手順
 
@@ -780,7 +780,6 @@ ImageKit には**サブアカウント**（API キー・メディアライブラ
 | GitHub App | **1つの App を複数リポジトリにインストールできる。** インストールごとに installation ID が異なるため、`GITHUB_APP_INSTALLATION_ID` の差し替えだけでよく、App を作り直す必要はない |
 | GitHub OAuth App | Redirect URI を最大10件登録できるため1つで複数ドメインを賄える。分離したい場合はプロジェクトごとに作成 |
 | Upstash | レート制限のキーにプロジェクト識別子を前置すれば1つの DB を共有できる |
-| Vercel | プロジェクトごとにデプロイ |
 
 ---
 
@@ -889,9 +888,9 @@ Cache-Control: public, s-maxage=60, stale-while-revalidate=300
 
 | 層 | 内容 |
 | --- | --- |
-| CDN | `s-maxage=60, stale-while-revalidate=300`。同一 URL の再アクセスはオリジンに届かない |
-| 支出上限（NFR-SEC-05c） | ホスティング側の Spend Management で課金上限を設定する。「安全」と「安い」を最終的に担保するのはここ |
-| 緊急時 | ホスティング側の攻撃対策モード（Vercel の Attack Challenge Mode 等）を手動で有効化する。利用可否はプランに依存するため Phase 15 で確認する |
+| CDN | `s-maxage=60, stale-while-revalidate=300`。同一 URL の再アクセスはオリジンに届かない。**ローカル実行では CDN が存在しないため、ヘッダは将来のデプロイに備えた設定として付けるだけになる** |
+| 支出上限（NFR-SEC-05c） | ホスティング側の課金上限を設定する。「安全」と「安い」を最終的に担保するのはここ。**デプロイする場合に適用する**（requirements.md OPEN-01） |
+| 緊急時 | ホスティング側の攻撃対策モードを手動で有効化する。利用可否は基盤とプランに依存するため、デプロイ先を決める時点で確認する |
 | 補助 | 関数インスタンス内のメモリによる best-effort な上限。インスタンス間で共有されないため主たる防御とはしないが、無料で単一インスタンスの暴走は抑えられる |
 
 ### 9.7 公開サイト側の推奨実装
@@ -1054,7 +1053,6 @@ src/
 | `.npmrc`（コミットする） | `@zukki30:registry=https://npm.pkg.github.com` |
 | `~/.npmrc`（コミットしない） | `//npm.pkg.github.com/:_authToken=<classic PAT / read:packages>` |
 | GitHub Actions | `NODE_AUTH_TOKEN` |
-| Vercel | 環境変数 `NPM_RC` |
 
 ```bash
 # --- GitHub OAuth（ユーザー識別のみ） ---

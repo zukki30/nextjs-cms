@@ -72,7 +72,8 @@ Phase 6 の完了時点で「コンテンツを GitHub 上で手で書けば公�
 | プロジェクト（コミットする） | `.npmrc` に `@zukki30:registry=https://npm.pkg.github.com` |
 | ローカル（コミットしない） | `~/.npmrc` に `read:packages` を付けた **classic PAT**（fine-grained token は非対応） |
 | GitHub Actions | `actions/setup-node` に `registry-url` と `scope` を指定し `NODE_AUTH_TOKEN` を渡す。加えて**パッケージ設定の Manage Actions access で `nextjs-cms` を Read 追加**する |
-| Vercel | 環境変数 `NPM_RC` にレジストリ設定とトークンを設定する。**これを忘れるとデプロイ時の install が失敗する**（README には記載が無い） |
+
+本仕様ではデプロイしない（requirements.md OPEN-01）ため、設定箇所はローカルと CI の2つだけになる。将来デプロイする場合は、その基盤でも同等のレジストリ設定が必要になる。
 
 ---
 
@@ -88,7 +89,7 @@ Phase 6 の完了時点で「コンテンツを GitHub 上で手で書けば公�
 | 0-4 | 上記 GitHub App を **content リポジトリ1つだけ**にインストール（"All repositories" は選ばない） | `GITHUB_APP_INSTALLATION_ID` |
 | 0-5 | ImageKit の無料アカウントを作成。**Restricted key**（Media Management: Read and write / Account Management: None）を1本発行し、public key と URL endpoint を控える | `IMAGEKIT_PUBLIC_KEY` / `IMAGEKIT_PRIVATE_KEY` / `IMAGEKIT_URL_ENDPOINT` |
 | 0-6 | Upstash の無料アカウントを作成し Redis データベースを1つ作成（OPEN-D1）。**Phase 15 まで使わないので後回しで可** | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` |
-| 0-7 | `AUTH_SECRET` を生成（`openssl rand -base64 32`）。**書き込み先の `.env` が無いため Phase 1-11 に繰り込む。** 本番は別の値を生成しホスティング側の環境変数に設定する | `AUTH_SECRET` |
+| 0-7 | `AUTH_SECRET` を生成（`openssl rand -base64 32`）。**書き込み先の `.env` が無いため Phase 1-11 に繰り込む。** デプロイする場合は別の値を生成し、その基盤の環境変数に設定する | `AUTH_SECRET` |
 
 > Phase 1〜5 のテストは外部サービスをモックするため、**Phase 0 が未完でも Phase 6 まで実装・テストは進められる**。実際に GitHub へ繋いだ疎通確認が必要になるのは Phase 5 の末尾以降。
 
@@ -239,6 +240,10 @@ FR-MD-01〜05, FR-API-07, NFR-SEC-06
 - 公開判定テスト: `publishedAt` が未来のエントリが時刻到来前は返らず、注入時刻を進めると返ること。`archived` が返らないこと
 - Webhook テスト: 署名不正で 401、`main` 以外の ref を無視、正常時に対象タグが破棄されること
 - **ここで初回の実疎通確認**: content リポジトリにサンプル `.md` を手で置き、インデックスが構築できること（Phase 0 完了が前提）
+
+> **Webhook の実疎通はローカル実行では成立しない。** デプロイしない方針（requirements.md OPEN-01）のため、GitHub から `localhost` へは届かない。
+> 実装と単体テストは署名付きリクエストを自前で組んで検証する（NFR-QA-04）。実際に GitHub から受け取る確認が必要な場合は、`gh webhook forward` などのトンネルで一時的に転送する。
+> **Webhook が届かない間もキャッシュは `revalidate: 600` のフォールバックで回復する**（FR-CACHE-06）ため、機能としては成立する。
 
 ### 対応要件
 FR-CACHE-01〜08, FR-API-04, FR-CONTENT-09, NFR-PERF-01〜02b
@@ -497,7 +502,7 @@ FR-TAXO-01, 02, 05, FR-IMG-04, 05, FR-CONTENT-05, 06, 09
 | 15-1 | `next.config.ts` にセキュリティヘッダ: CSP（`script-src 'self'`、`img-src` に `ik.imagekit.io`、`connect-src` に `upload.imagekit.io`）、`X-Frame-Options: DENY`、`Referrer-Policy`、`X-Content-Type-Options` |
 | 15-2 | `src/server/middleware/rateLimit.ts`: `@upstash/ratelimit` で **管理 API と Webhook のみ**に上限を設定。公開 API には適用しない（design.md 3.5 / 9.6） |
 | 15-3 | 公開 API に、関数インスタンス内メモリによる best-effort な上限を補助として入れる（主たる防御はクエリ正規化） |
-| 15-4 | ホスティング側の**支出上限を設定**（NFR-SEC-05c）。緊急時の攻撃対策モードの有効化手順を `docs/operations.md` に記載 |
+| 15-4 | **ローカル実行のみのため本フェーズでは対象外**（requirements.md OPEN-01）。デプロイする場合に支出上限を設定する（NFR-SEC-05c）。判断の経緯と、デプロイ時に必要な設定を `docs/operations.md` に記載しておく |
 | 15-5 | ログ出力の監査: シークレット・トークン・Cookie が出力されないことを確認 |
 | 15-6 | `.env` が `.gitignore` されていることの確認。コミット済みシークレットがないことの確認 |
 | 15-7 | 依存パッケージの脆弱性チェック（`npm audit`） |
@@ -507,7 +512,7 @@ FR-TAXO-01, 02, 05, FR-IMG-04, 05, FR-CONTENT-05, 06, 09
 - CSP 配下で Admin が正常に動作すること（インラインスクリプトの排除）
 - 管理 API・Webhook でレート制限超過時に 429 + `RATE_LIMITED` が返ること
 - 公開 API への大量アクセスで Upstash のコマンドが消費されないこと（公開 API 経路に Redis 呼び出しが存在しないことをテストで担保）
-- 支出上限が設定されていること
+- デプロイ時に必要な設定（支出上限・攻撃対策モード）が `docs/operations.md` に記載されていること
 - `npm audit` に high 以上の指摘がないこと
 
 ### 対応要件
@@ -521,7 +526,7 @@ NFR-SEC-05, NFR-SEC-07〜09
 | # | 内容 |
 | --- | --- |
 | 16-1 | `README.md` を全面改訂。アーキテクチャ概要、Phase 0 のセットアップ手順（GitHub App / OAuth App / ImageKit / Upstash / content リポジトリ）、**デザインシステムの install 設定（`~/.npmrc` に classic PAT が必要なこと）**、mise / pnpm の前提、開発コマンド |
-| 16-1b | デプロイ手順を記載。**Vercel の環境変数に `NPM_RC` を設定する**（未設定だとデザインシステムの install に失敗しデプロイできない）。**パッケージ設定の Manage Actions access に `nextjs-cms` を Read 追加する**（0.4） |
+| 16-1b | ローカル起動手順を記載。**`~/.npmrc` に classic PAT が必要**なこと、**パッケージ設定の Manage Actions access に `nextjs-cms` を Read 追加する**こと（0.4）。デプロイしない方針（requirements.md OPEN-01）と、将来デプロイする場合に必要な設定も併記する |
 | 16-2 | `docs/api.md` の最終化（公開 API リファレンス）。**公開サイト側の推奨実装**（サーバー側取得・SSG/ISR による可用性の切り離し・書き込みは提供しないこと）を design.md 9.7 に基づいて記載する |
 | 16-3 | `docs/operations.md`: GitHub 上で直接編集する場合の手順、トラブルシュート（Webhook 不達時、インデックス不整合時） |
 | 16-4 | 受け入れ基準 1〜11 の通し確認 |
@@ -602,12 +607,12 @@ FR-PREVIEW-01〜06, FR-DRAFT-05
 | リスク | 影響 | 対応 |
 | --- | --- | --- |
 | Git Data API での tree 操作の実装ミス | コンテンツの消失 | Phase 3 の契約テストを厚くする。`base_tree` を必ず指定し、差分のみを渡す。削除は明示的に `sha: null` のみ |
-| Vercel Data Cache の 2MB 制限 | インデックスが保存できない | Phase 5 でインデックスのサイズを計測するテストを入れる。超える場合は type ごとに分割する |
+| インデックスの肥大化 | メモリ消費が増え、将来デプロイする場合は Data Cache の1エントリ上限（Vercel なら 2MB）にも収まらない | Phase 5 でインデックスのサイズを計測するテストを入れる。超える場合は type ごとに分割する |
 | GitHub API のレート制限 | 公開 API の停止 | Phase 5 の呼び出し回数テストで担保。Webhook 不達時も 600 秒のフォールバックで回復 |
 | Auth.js v5 の仕様変更 | 認証の破綻 | バージョンを固定する。`src/auth/` に閉じ込め、他層へ漏らさない |
 | ImageKit 無料枠（ストレージ 3GB）の超過 | 画像のアップロード・配信の停止 | Phase 11 で原本を 5MB に制限し、配信は変換後の派生画像（ストレージを消費しない）に寄せる。README に枠の確認方法を記載 |
 | ImageKit Upload V2 の仕様変更 | アップロード不可 | 公式 SDK がないため `src/media/` に閉じ込め、interface 越しにしか触らない。着手時に最新ドキュメントで仕様を確認する |
 | プレビューと公開結果の乖離 | 品質事故 | Phase 13 で両者の一致をテストで固定（受け入れ基準 9） |
-| デザインシステムが private パッケージであること | ローカル・CI・Vercel のいずれかで install に失敗し、ビルドが通らない | 0.4 に3箇所の設定をまとめ、Phase 1 の完了条件に CI での install 成功を含める。Vercel 側は Phase 16 で設定する |
+| デザインシステムが private パッケージであること | ローカルまたは CI で install に失敗し、ビルドが通らない | 0.4 に2箇所の設定をまとめ、Phase 1 の完了条件に CI での install 成功を含める |
 | デザインシステムのメジャー更新 | 破壊的変更で Admin UI が壊れる | バージョンを `^4.0.0` で固定し、更新時は Storybook（公開 Chromatic）で差分を確認してから上げる |
 | デザインシステムに無いコンポーネントの a11y | キーボード操作・スクリーンリーダー対応の不備 | Toast と Combobox は Radix UI のプリミティブに任せ、ARIA パターンを自前実装しない（PLAN-D3） |
