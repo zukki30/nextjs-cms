@@ -41,8 +41,11 @@ nextjs-cms-content（private・データのみ・デプロイしない）
 | 画像 | ImageKit |
 | 品質 | Biome / Vitest |
 | パッケージ管理 | pnpm（バージョンは mise で固定） |
+| 実行環境 | **ローカル実行のみ。デプロイしない**（[requirements.md](./docs/specs/github-content-cms/requirements.md) OPEN-01） |
 
 データベースは使用しない。
+
+デプロイ先は設けない。GitHub Pages は静的ファイルの配信のみでサーバー実行環境が無く、管理 API・認証・Webhook が動かないため使えない。デプロイが必要になった時点で、サーバー実行環境を持つ基盤から選び直す。
 
 ## 仕様書
 
